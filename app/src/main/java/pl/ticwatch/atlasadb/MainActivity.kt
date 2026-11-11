@@ -7,6 +7,8 @@ import android.net.Uri
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
+import android.os.Build
+import android.view.WindowInsets
 import android.text.InputType
 import android.widget.Button
 import android.widget.EditText
@@ -46,6 +48,17 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(12), dp(16), dp(14))
             setBackgroundColor(bg)
         }
+        // Android 15+ enforces edge-to-edge for target SDK 35.
+        // Respect status/navigation bars so the title does not overlap the clock.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            root.setOnApplyWindowInsetsListener { view, insets ->
+                val bars = insets.getInsets(WindowInsets.Type.systemBars())
+                view.setPadding(dp(16), bars.top + dp(12), dp(16), bars.bottom + dp(14))
+                insets
+            }
+        } else {
+            root.fitsSystemWindows = true
+        }
         val title = TextView(this).apply { text = "ATLAS  •  ADB CONSOLE"; textSize = 21f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD) }
         root.addView(title)
         status = TextView(this).apply { text = "● Rozłączony"; setTextColor(Color.LTGRAY); textSize = 14f; setPadding(0,dp(7),0,dp(12)) }
@@ -77,14 +90,11 @@ class MainActivity : Activity() {
         row2.addView(button("Wyczyść", panel) { log.text = "" }, LinearLayout.LayoutParams(0, dp(48), 1f))
         row2.addView(button("Udostępnij", panel) { shareLog() }, LinearLayout.LayoutParams(0, dp(48), 1f))
         fields.addView(row2)
-        fields.addView(section("Instalowanie aplikacji", accent))
-        fields.addView(button("Wybierz APK z telefonu i zainstaluj na zegarku", accent) { selectApk() })
-        fields.addView(TextView(this).apply {
-            text = "Wybierz pojedynczy plik .apk z pamięci telefonu. Instalacja wymaga połączenia ADB."
-            textSize = 12f
-            setTextColor(Color.LTGRAY)
-            setPadding(0, dp(8), 0, dp(8))
-        })
+        // Keep APK installation outside the scrolling connection form.
+        // It stays visible even when that form is taller than the screen.
+        root.addView(section("Instalowanie aplikacji", accent))
+        val installButton = button("Zainstaluj APK na zegarku", accent) { selectApk() }
+        root.addView(installButton, LinearLayout.LayoutParams(-1, dp(52)))
         root.addView(section("Wynik", accent))
         val resultScroll = ScrollView(this).apply { setBackgroundColor(panel) }
         log = TextView(this).apply {
