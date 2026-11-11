@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "pl.ticwatch.atlasadb"
-    compileSdk = 37
+    compileSdk = 36
     defaultConfig {
         applicationId = "pl.ticwatch.atlasadb"
         minSdk = 28
