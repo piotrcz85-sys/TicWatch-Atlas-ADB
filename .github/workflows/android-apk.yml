@@ -32,9 +32,22 @@ jobs:
           gradle-version: '9.4.1'
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug --stacktrace
-      - name: Upload debug APK
+      - name: Name APK using app version and build number
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle_file="app/build.gradle.kts"
+          version_name="$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\\1/p' "$gradle_file" | head -n 1)"
+          version_code="$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\\1/p' "$gradle_file" | head -n 1)"
+          test -n "$version_name" && test -n "$version_code"
+          name="Atlas-ADB-Console-v${version_name}-build${version_code}"
+          mv app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/${name}.apk"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "Prepared ${name}.apk"
+      - name: Upload versioned APK
         uses: actions/upload-artifact@v4
         with:
-          name: Atlas-ADB-Console-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: ${{ steps.package.outputs.name }}
+          path: app/build/outputs/apk/debug/${{ steps.package.outputs.name }}.apk
           if-no-files-found: error
