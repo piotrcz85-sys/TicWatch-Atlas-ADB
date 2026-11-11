@@ -1,18 +1,24 @@
 # TicWatch Atlas ADB Console
 
-Aplikacja na Androida w Kotlinie do połączenia ADB przez Wi-Fi z zegarkiem Mobvoi TicWatch Atlas i innymi urządzeniami Wear OS.
+Minimalna aplikacja Android do połączenia z zegarkiem Mobvoi TicWatch Atlas przez debugowanie bezprzewodowe.
 
 ## Funkcje
-- Parowanie ADB za pomocą adresu IP, portu parowania i sześciocyfrowego kodu
+- Parowanie kodem ADB (adres IP i port parowania)
 - Połączenie przez osobny port ADB
-- Konsola poleceń `adb shell`, wyświetlanie wyników
-- Skróty do diagnostyki baterii, temperatur, RAM, ekranu i aplikacji
-- Udostępnianie wyników
+- Konsola `adb shell` z wynikami i udostępnianiem logu
+- **Instalowanie pojedynczych plików APK** wybranych z pamięci telefonu (systemowy selektor dokumentów)
+- Zapisywanie ostatniego adresu i portu połączenia
 
-## APK na GitHubie
-Otwórz zakładkę **Actions**, wybierz **Build Atlas ADB APK** i uruchom **Run workflow**, jeśli workflow jeszcze nie wystartował. Po udanym buildzie wybierz artefakt `Atlas-ADB-Console-debug` i pobierz APK.
+## Instalacja aplikacji na zegarku
+1. Włącz na zegarku Opcje programisty → Debugowanie bezprzewodowe.
+2. Sparuj aplikację z zegarkiem, podając IP, port parowania i sześciocyfrowy kod.
+3. Wpisz port połączenia wyświetlany osobno w ustawieniach debugowania i kliknij Połącz.
+4. Wybierz **Wybierz APK z telefonu i zainstaluj na zegarku**, wskaż lokalny plik `.apk`.
+5. Aplikacja kopiuje plik do prywatnego folderu tymczasowego telefonu, wywołuje `Kadb.install()` i usuwa plik tymczasowy.
 
-## Połączenie
-Włącz debugowanie bezprzewodowe na zegarku. Wpisz w aplikacji adres IP, port parowania i kod wyświetlony na zegarku. Po sparowaniu użyj **innego portu połączenia** z ekranu debugowania bezprzewodowego.
+Tylko pojedyncze pliki `.apk`; pakiety split APK (`.apks`, `.xapk`, `.apkm`) nie są jeszcze obsługiwane. Program nie omija ograniczeń zgodności aplikacji z Wear OS.
 
-**Status:** projekt testowy. Automatyczna kompilacja nie zastępuje testu połączenia z fizycznym zegarkiem. Komendy konsoli mogą zmieniać stan urządzenia.
+## Budowanie przez GitHub Actions
+Wejdź do **Actions → Build Atlas ADB APK**. Workflow uruchamia się też po zmianach w gałęzi `main`. Po zakończeniu sukcesem pobierz artefakt **Atlas-ADB-Console-debug**, który zawiera `app-debug.apk`.
+
+Projekt wymaga potwierdzenia kompilacji i fizycznych testów połączenia oraz instalacji na TicWatch Atlas. Nie podawaj kodu parowania innym osobom.
