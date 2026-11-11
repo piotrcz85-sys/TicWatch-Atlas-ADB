@@ -2,6 +2,8 @@ package pl.ticwatch.atlasadb
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -17,8 +19,10 @@ import com.flyfishxu.kadb.cert.KadbCertPolicy
 import com.flyfishxu.kadb.cert.OkioFilePrivateKeyStore
 import okio.Path.Companion.toPath
 import java.util.concurrent.Executors
+import java.io.File
 
 class MainActivity : Activity() {
+    private val selectApkRequest = 401
     private val io = Executors.newSingleThreadExecutor()
     private lateinit var host: EditText
     private lateinit var pairPort: EditText
@@ -63,22 +67,6 @@ class MainActivity : Activity() {
         row1.addView(button("Połącz", accent) { connect() }, LinearLayout.LayoutParams(0, dp(46), 1f))
         row1.addView(button("Rozłącz", panel) { connected = false; setStatus("● Rozłączony", false); append("Rozłączono w aplikacji.") }, LinearLayout.LayoutParams(0, dp(46), 1f))
         fields.addView(row1)
-        fields.addView(section("Szybka diagnostyka", accent))
-        val presets = listOf(
-            "Model" to "getprop ro.product.model",
-            "Android" to "getprop ro.build.version.release",
-            "Bateria" to "dumpsys battery",
-            "Temperatura" to "dumpsys thermalservice",
-            "RAM" to "cat /proc/meminfo",
-            "Dysk" to "df -h",
-            "Ekran" to "wm size; wm density",
-            "Aplikacje" to "pm list packages -3"
-        )
-        presets.chunked(2).forEach { pair ->
-            val r = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            pair.forEach { (label, cmd) -> r.addView(button(label, panel) { command.setText(cmd); execute(cmd) }, LinearLayout.LayoutParams(0, dp(44), 1f)) }
-            fields.addView(r)
-        }
         fields.addView(section("Konsola • polecenia shell", accent))
         command = edit("np. dumpsys battery", "getprop ro.product.model")
         command.isSingleLine = false
@@ -89,6 +77,14 @@ class MainActivity : Activity() {
         row2.addView(button("Wyczyść", panel) { log.text = "" }, LinearLayout.LayoutParams(0, dp(48), 1f))
         row2.addView(button("Udostępnij", panel) { shareLog() }, LinearLayout.LayoutParams(0, dp(48), 1f))
         fields.addView(row2)
+        fields.addView(section("Instalowanie aplikacji", accent))
+        fields.addView(button("Wybierz APK z telefonu i zainstaluj na zegarku", accent) { selectApk() })
+        fields.addView(TextView(this).apply {
+            text = "Wybierz pojedynczy plik .apk z pamięci telefonu. Instalacja wymaga połączenia ADB."
+            textSize = 12f
+            setTextColor(Color.LTGRAY)
+            setPadding(0, dp(8), 0, dp(8))
+        })
         root.addView(section("Wynik", accent))
         val resultScroll = ScrollView(this).apply { setBackgroundColor(panel) }
         log = TextView(this).apply {
@@ -150,6 +146,47 @@ class MainActivity : Activity() {
                 val result = adb.shell(cmd)
                 append(result.output.ifBlank { "(brak wyniku)" })
                 append("Kod zakończenia: ${result.exitCode}")
+            }
+        }
+    }
+
+    private fun selectApk() {
+        if (!connected) {
+            append("Najpierw połącz się z zegarkiem.")
+            return
+        }
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/vnd.android.package-archive"
+        }
+        startActivityForResult(intent, selectApkRequest)
+    }
+
+    @Deprecated("Android Activity result compatibility")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != selectApkRequest || resultCode != RESULT_OK) return
+        val uri: Uri = data?.data ?: return
+        val h = host.text.toString().trim()
+        val p = connectPort.text.toString().toIntOrNull()
+        if (!connected || h.isBlank() || p == null || p !in 1..65535) {
+            append("Nieprawidłowe połączenie ADB.")
+            return
+        }
+        runJob("Instalowanie wybranego APK na zegarku...") {
+            val apk = File.createTempFile("watch-install-", ".apk", cacheDir)
+            try {
+                contentResolver.openInputStream(uri)?.use { source ->
+                    apk.outputStream().use { dest -> source.copyTo(dest) }
+                } ?: error("Nie można otworzyć wybranego pliku.")
+                require(apk.length() > 0) { "Wybrany plik jest pusty." }
+                append("Przesyłanie APK: ${apk.length()} bajtów.")
+                Kadb.create(h, p).use { adb ->
+                    adb.install(apk)
+                }
+                append("Polecenie instalacji zakończone bez błędu.")
+            } finally {
+                apk.delete()
             }
         }
     }
