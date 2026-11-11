@@ -65,7 +65,7 @@ class MainActivity : Activity() {
             root.fitsSystemWindows = true
         }
         val title = TextView(this).apply {
-            text = "ATLAS ADB  •  v1.2 (build 3)"
+            text = "ATLAS ADB  •  v${packageManager.getPackageInfo(packageName, 0).versionName} (build ${packageManager.getPackageInfo(packageName, 0).longVersionCode})"
             textSize = 19f
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
