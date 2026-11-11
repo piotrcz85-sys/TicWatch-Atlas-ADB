@@ -19,5 +19,5 @@ android {
 }
 
 dependencies {
-    implementation("com.flyfishxu:kadb:2.1.5")
+    implementation("com.flyfishxu:kadb:2.1.1")
 }
