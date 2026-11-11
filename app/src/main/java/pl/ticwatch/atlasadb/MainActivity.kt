@@ -114,7 +114,7 @@ class MainActivity : Activity() {
             append("Podaj IP, poprawny port parowania i sześciocyfrowy kod."); return
         }
         runJob("Parowanie z $h:$p") {
-            Kadb.pair(h, p!!, code)
+            kotlinx.coroutines.runBlocking { Kadb.pair(h, p!!, code) }
             append("Parowanie zakończone. Wpisz teraz oddzielny port połączenia z ekranu debugowania bezprzewodowego.")
         }
     }
