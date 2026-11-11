@@ -38,8 +38,8 @@ jobs:
         run: |
           set -euo pipefail
           gradle_file="app/build.gradle.kts"
-          version_name="$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\\1/p' "$gradle_file" | head -n 1)"
-          version_code="$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\\1/p' "$gradle_file" | head -n 1)"
+          version_name="$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$gradle_file" | head -n 1)"
+          version_code="$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "$gradle_file" | head -n 1)"
           test -n "$version_name" && test -n "$version_code"
           name="Atlas-ADB-Console-v${version_name}-build${version_code}"
           mv app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/${name}.apk"
