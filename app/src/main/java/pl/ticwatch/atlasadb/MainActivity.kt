@@ -9,6 +9,7 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Build
 import android.view.WindowInsets
+import android.view.View
 import android.text.InputType
 import android.widget.Button
 import android.widget.EditText
@@ -48,21 +49,36 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(12), dp(16), dp(14))
             setBackgroundColor(bg)
         }
-        // Android 15+ enforces edge-to-edge for target SDK 35.
-        // Respect status/navigation bars so the title does not overlap the clock.
+        // Explicitly lay out behind system bars and reserve real inset space.
+        // Request insets after attaching the root; never rely on legacy fit behavior.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
             root.setOnApplyWindowInsetsListener { view, insets ->
                 val bars = insets.getInsets(WindowInsets.Type.systemBars())
-                view.setPadding(dp(16), bars.top + dp(12), dp(16), bars.bottom + dp(14))
+                val top = maxOf(bars.top, dp(28))
+                view.setPadding(dp(16), top + dp(12), dp(16), bars.bottom + dp(14))
                 insets
             }
         } else {
+            @Suppress("DEPRECATION")
+            root.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
             root.fitsSystemWindows = true
         }
-        val title = TextView(this).apply { text = "ATLAS  •  ADB CONSOLE"; textSize = 21f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD) }
+        val title = TextView(this).apply {
+            text = "ATLAS ADB  •  v1.2 (build 3)"
+            textSize = 19f
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+        }
         root.addView(title)
         status = TextView(this).apply { text = "● Rozłączony"; setTextColor(Color.LTGRAY); textSize = 14f; setPadding(0,dp(7),0,dp(12)) }
         root.addView(status)
+
+        // Prominent installer: fixed above the scrollable connection/console controls.
+        val installButton = button("ZAINSTALUJ APK NA ZEGARKU", accent) { selectApk() }
+        root.addView(installButton, LinearLayout.LayoutParams(-1, dp(52)).apply {
+            bottomMargin = dp(12)
+        })
 
         val inputScroll = ScrollView(this)
         val fields = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -76,9 +92,9 @@ class MainActivity : Activity() {
         connectPort = edit("Port połączenia ADB", prefs.getString("connectPort", "") ?: "", true)
         fields.addView(pairPort); fields.addView(pairCode); fields.addView(connectPort)
         val row1 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        row1.addView(button("Sparuj", accent) { pair() }, LinearLayout.LayoutParams(0, dp(46), 1f))
-        row1.addView(button("Połącz", accent) { connect() }, LinearLayout.LayoutParams(0, dp(46), 1f))
-        row1.addView(button("Rozłącz", panel) { connected = false; setStatus("● Rozłączony", false); append("Rozłączono w aplikacji.") }, LinearLayout.LayoutParams(0, dp(46), 1f))
+        row1.addView(button("Sparuj", accent) { pair() }, spacedButtonParams(1f))
+        row1.addView(button("Połącz", accent) { connect() }, spacedButtonParams(1f))
+        row1.addView(button("Rozłącz", panel) { connected = false; setStatus("● Rozłączony", false); append("Rozłączono w aplikacji.") }, spacedButtonParams(1f))
         fields.addView(row1)
         fields.addView(section("Konsola • polecenia shell", accent))
         command = edit("np. dumpsys battery", "getprop ro.product.model")
@@ -86,15 +102,10 @@ class MainActivity : Activity() {
         command.minLines = 2
         fields.addView(command)
         val row2 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        row2.addView(button("▶ Wykonaj", accent) { execute(command.text.toString()) }, LinearLayout.LayoutParams(0, dp(48), 2f))
-        row2.addView(button("Wyczyść", panel) { log.text = "" }, LinearLayout.LayoutParams(0, dp(48), 1f))
-        row2.addView(button("Udostępnij", panel) { shareLog() }, LinearLayout.LayoutParams(0, dp(48), 1f))
+        row2.addView(button("▶ Wykonaj", accent) { execute(command.text.toString()) }, spacedButtonParams(2f))
+        row2.addView(button("Wyczyść", panel) { log.text = "" }, spacedButtonParams(1f))
+        row2.addView(button("Udostępnij", panel) { shareLog() }, spacedButtonParams(1f))
         fields.addView(row2)
-        // Keep APK installation outside the scrolling connection form.
-        // It stays visible even when that form is taller than the screen.
-        root.addView(section("Instalowanie aplikacji", accent))
-        val installButton = button("Zainstaluj APK na zegarku", accent) { selectApk() }
-        root.addView(installButton, LinearLayout.LayoutParams(-1, dp(52)))
         root.addView(section("Wynik", accent))
         val resultScroll = ScrollView(this).apply { setBackgroundColor(panel) }
         log = TextView(this).apply {
@@ -106,6 +117,7 @@ class MainActivity : Activity() {
         resultScroll.addView(log)
         root.addView(resultScroll, LinearLayout.LayoutParams(-1,0,3f))
         setContentView(root)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) root.requestApplyInsets()
         io.execute {
             try {
                 val store = OkioFilePrivateKeyStore(java.io.File(filesDir, "adb_private_key.pem").absolutePath.toPath())
@@ -237,6 +249,12 @@ class MainActivity : Activity() {
         setTextColor(Color.WHITE); setBackgroundColor(color)
         setOnClickListener { action() }
     }
+    private fun spacedButtonParams(weight: Float): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(0, dp(48), weight).apply {
+            marginStart = dp(3)
+            marginEnd = dp(3)
+        }
+
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
     override fun onDestroy() { io.shutdownNow(); super.onDestroy() }
 }
